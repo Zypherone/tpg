@@ -4,64 +4,49 @@ const Intern = require("./lib/Intern");
 const inquirer = require("inquirer");
 const path = require("path");
 const fs = require("fs");
+const util = require('util')
+const readFileAsync = util.promisify(fs.readFile)
+const accessFileAsync = util.promisify(fs.access)                     
+const mkdirFileAsync = util.promisify(fs.mkdir)
+const writeFileAsync = util.promisify(fs.writeFile);
 
 const OUTPUT_DIR = path.resolve(__dirname, "output");
 const outputPath = path.join(OUTPUT_DIR, "team.html");
 
 const render = require("./lib/htmlRenderer");
 
-
-// Write code to use inquirer to gather information about the development team members,
-// and to create objects for each team member (using the correct classes as blueprints!)
-
-// After the user has input all employees desired, call the `render` function (required
-// above) and pass in an array containing all employee objects; the `render` function will
-// generate and return a block of HTML including templated divs for each employee!
-
-// After you have your html, you're now ready to create an HTML file using the HTML
-// returned from the `render` function. Now write it to a file named `team.html` in the
-// `output` folder. You can use the variable `outputPath` above target this location.
-// Hint: you may need to check if the `output` folder exists and create it if it
-// does not.
-
-// HINT: each employee type (manager, engineer, or intern) has slightly different
-// information; write your code to ask different questions via inquirer depending on
-// employee type.
-
-// HINT: make sure to build out your classes first! Remember that your Manager, Engineer,
-// and Intern classes should all extend from a class named Employee; see the directions
-// for further information. Be sure to test out each class and verify it generates an
-// object with the correct structure and methods. This structure will be crucial in order
-// for the provided `render` function to work! ```
-
-
+// Set a base employee team list.
 const teamList = [];
 
+// Build the questions for all the different roles.
 const questions = {
-  global: [
+  // A list of base questions for all roles.
+  base: [
     {
       type: 'input',
-      name: 'Name',
-      message: 'Enter ROLE name'
+      name: 'name',
+      message: 'Enter ROLE\s name'
     },
     {
       type: 'input',
-      name: 'ID',
+      name: 'id',
       message: 'Enter ROLE\'s ID'
     },
     {
       type: 'input',
-      name: 'Email',
+      name: 'email',
       message: 'Enter ROLE\'s Email'
     }
   ],
+  // A list of questions for the manager's role
   manager: [
     {
       type: 'input',
-      name: 'OfficeNumber',
+      name: 'number',
       message: 'Enter Office Number'
     }
   ],
+  // A list of questions for the engineer's role
   engineer: [
     {
       type: 'input',
@@ -69,6 +54,7 @@ const questions = {
       message: 'Enter GitHub username'
     }
   ],
+  // A list of questions for the intern's role
   intern: [
     {
       type: 'input',
@@ -76,6 +62,7 @@ const questions = {
       message: 'Enter School/College name'
     }
   ],
+  // Final follow up question
   anotherEntry: [
     {
       type: 'confirm',
@@ -85,10 +72,9 @@ const questions = {
   ]
 }
 
-
-
 const init = () => {
 
+  // The base roles choices for the first question.
   const roles = [
     'manager',
     'engineer',
@@ -102,36 +88,59 @@ const init = () => {
       type: 'rawlist',
       name: 'role',
       message: 'Enter new employee\'s role type',
-      choices: roles
+      choices: () => {
+        return roles.map(val => {
+          return val.replace(/^\w/, c => c.toUpperCase())
+        })
+      },
+      filter: (a) => {
+        return a.toLowerCase()
+      }
     })
     .then(r => {
       
       const role = r.role;
 
-      /*
-      if (role === 'manager' && roles.indexOf('manager') > -1) addManager()
-      else if (role === 'engineer') addEngineer()
-      else if (role === 'intern') addIntern()
-      else endEntry()
-      */
-
       switch (role) {
         case 'manager':
+          // Once we start the managers entry, list remove it from the array so we are not prompted.
           roles.splice(roles.indexOf('manager'), 1);
 
         case 'engineer':
         case 'intern':
             
-            inquirer
-              .prompt(questions.global.concat(questions[role], questions.anotherEntry))
-              .then((r) => {
-        
-                if (r.anotherEntry) askRole();
-                else endEntry();
-              })
+          // Join and map a list of all the questions for the relevent roles.
+          const listOfQuestions = questions.base // Base question
+                                    .concat(
+                                      questions[role], // Role specific question
+                                      questions.anotherEntry // Final follow up question
+                                    );
+
+          listOfQuestions.map(val => {
+            val.message = val.message.replace('ROLE', role);
+          })
+
+          inquirer
+            .prompt(listOfQuestions)
+            .then((r) => {
+
+              // Based on the role lets pull the different classes and push to teamList.
+              if (role === 'manager') 
+                teamList.push(new Manager(r.name, r.id, r.email, r.number))
+              else if (role === 'engineer')
+                teamList.push(new Engineer(r.name, r.id, r.email, r.github))
+              else 
+                teamList.push(new Intern(r.name, r.id, r.email, r.school))
+
+              // Lets repeat the process or end it!
+              if (r.anotherEntry) askRole();
+              else endEntry();
+            })
 
           break;
         default:
+
+          // If all options does not match end it!
           endEntry();
           break;
       }
@@ -141,26 +150,25 @@ const init = () => {
   }
 
   endEntry = () => {
-    console.log('Roster completed!')
+    
+    accessFileAsync(OUTPUT_DIR)
+    .catch(function (err) {
+      if (err && err.code === 'ENOENT') {
+        mkdirFileAsync('output')
+      }
+      return true
+    })
+    .then(() => {
+      writeFileAsync(outputPath, render(teamList))
+      .then(() => {
+        console.log('Team roster is complete!')
+      })
+      .catch(err => {
+        console.log('Unable to render team roster.')
+      })
+    })
   }
  
-  /*
-  addEmployee.forEach(q => {
-
-    console.log(Object.keys(q));
-
-    //console.log(val);
-
-    /*
-    key.filter((data) => {
-
-      console.log(data === 'message');
-
-    })
-    
-  })
-  */
-
   askRole();
 
 }
