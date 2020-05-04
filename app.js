@@ -35,7 +35,13 @@ const questions = {
     {
       type: 'input',
       name: 'email',
-      message: 'Enter ROLE\'s Email'
+      message: 'Enter ROLE\'s Email',
+      validate: input => {
+        if(/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(input)) {
+            return true;
+        }
+        return 'Please enter a valid email address.';
+    }
     }
   ],
   // A list of questions for the manager's role
@@ -43,7 +49,13 @@ const questions = {
     {
       type: 'input',
       name: 'number',
-      message: 'Enter Office Number'
+      message: 'Enter Office Number',
+      validate: async (input) => {
+        if(/^(?:(?:\(?(?:00|\+)([1-4]\d\d|[1-9]\d?)\)?)?[\-\.\ \\\/]?)?((?:\(?\d{1,}\)?[\-\.\ \\\/]?){0,})(?:[\-\.\ \\\/]?(?:#|ext\.?|extension|x)[\-\.\ \\\/]?(\d+))?$/.test(input)) {
+            return true;
+        }
+        return 'Please enter a number a valid phone number.';
+    }   
     }
   ],
   // A list of questions for the engineer's role
