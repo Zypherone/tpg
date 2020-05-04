@@ -33,3 +33,136 @@ const render = require("./lib/htmlRenderer");
 // for further information. Be sure to test out each class and verify it generates an
 // object with the correct structure and methods. This structure will be crucial in order
 // for the provided `render` function to work! ```
+
+
+const teamList = [];
+
+const questions = {
+  global: [
+    {
+      type: 'input',
+      name: 'Name',
+      message: 'Enter ROLE name'
+    },
+    {
+      type: 'input',
+      name: 'ID',
+      message: 'Enter ROLE\'s ID'
+    },
+    {
+      type: 'input',
+      name: 'Email',
+      message: 'Enter ROLE\'s Email'
+    }
+  ],
+  manager: [
+    {
+      type: 'input',
+      name: 'OfficeNumber',
+      message: 'Enter Office Number'
+    }
+  ],
+  engineer: [
+    {
+      type: 'input',
+      name: 'github',
+      message: 'Enter GitHub username'
+    }
+  ],
+  intern: [
+    {
+      type: 'input',
+      name: 'school',
+      message: 'Enter School/College name'
+    }
+  ],
+  anotherEntry: [
+    {
+      type: 'confirm',
+      name: 'anotherEntry',
+      message: 'Add another employee'
+    }
+  ]
+}
+
+
+
+const init = () => {
+
+  const roles = [
+    'manager',
+    'engineer',
+    'intern',
+    'no further entries'
+  ]
+
+  askRole = () => {
+
+    inquirer.prompt({
+      type: 'rawlist',
+      name: 'role',
+      message: 'Enter new employee\'s role type',
+      choices: roles
+    })
+    .then(r => {
+      
+      const role = r.role;
+
+      /*
+      if (role === 'manager' && roles.indexOf('manager') > -1) addManager()
+      else if (role === 'engineer') addEngineer()
+      else if (role === 'intern') addIntern()
+      else endEntry()
+      */
+
+      switch (role) {
+        case 'manager':
+          roles.splice(roles.indexOf('manager'), 1);
+
+        case 'engineer':
+        case 'intern':
+            
+            inquirer
+              .prompt(questions.global.concat(questions[role], questions.anotherEntry))
+              .then((r) => {
+        
+                if (r.anotherEntry) askRole();
+                else endEntry();
+              })
+
+          break;
+        default:
+          endEntry();
+          break;
+      }
+
+    })
+
+  }
+
+  endEntry = () => {
+    console.log('Roster completed!')
+  }
+ 
+  /*
+  addEmployee.forEach(q => {
+
+    console.log(Object.keys(q));
+
+    //console.log(val);
+
+    /*
+    key.filter((data) => {
+
+      console.log(data === 'message');
+
+    })
+    
+  })
+  */
+
+  askRole();
+
+}
+
+init();
