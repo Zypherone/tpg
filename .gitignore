@@ -1,2 +1,5 @@
 node_modules
 app_temp.js
+ajax.js
+package-lock.json
+console.js
