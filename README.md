@@ -11,7 +11,7 @@ Template Engine - Employee Summary - Team generator command line application. Th
 ---
 
 ## Screenshots
-<img src="Example.gif" width="250">
+<img src="example.gif" width="250">
 
 ## Built with
 - [Node.js](https://nodejs.org/en/)
