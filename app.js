@@ -155,7 +155,7 @@ const init = () => {
     inquirer.prompt({
       type: 'confirm',
       name: 'role',
-      message: 'Are you sure you would like to quit?',
+      message: 'You have not entered anything. Are you sure you would like to quit?',
     })
     .then(processRoleEntry)
 
@@ -241,7 +241,7 @@ const init = () => {
     // Lets repeat the process or end it!
     if (!r.hasOwnProperty('anotherEntry')) askRole();
     else if (r.anotherEntry) askRole();
-    else confirmExit();
+    else endEntry();
   }
 
   endEntry = (cancel = false) => {
