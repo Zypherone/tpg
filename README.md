@@ -16,6 +16,8 @@ Template Engine - Employee Summary - Team generator command line application. Th
 ## Built with
 - [Node.js](https://nodejs.org/en/)
 - [Inquirer.js](Inquirer.js)
+- [Jest](https://www.npmjs.com/package/jest)
+- [Axios](https://www.npmjs.com/package/axios)
 
 ---
 

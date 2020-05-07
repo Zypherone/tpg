@@ -1,6 +1,7 @@
 const Manager = require("./lib/Manager");
 const Engineer = require("./lib/Engineer");
 const Intern = require("./lib/Intern");
+const ajax = require("./ajax.js");
 const inquirer = require("inquirer");
 const path = require("path");
 const fs = require("fs");
@@ -12,7 +13,6 @@ const writeFileAsync = util.promisify(fs.writeFile);
 
 const OUTPUT_DIR = path.resolve(__dirname, "output");
 const outputPath = path.join(OUTPUT_DIR, "team.html");
-const outputPath2 = path.join(OUTPUT_DIR, "team2.html")
 
 const render = require("./lib/htmlRenderer");
 
@@ -32,30 +32,13 @@ const questions = {
       type: 'input',
       name: 'id',
       message: 'Enter ROLE\'s ID',
-      validate: input => {
-
-        // Reference: https://www.w3resource.com/javascript/form/all-numbers.php
-        if (!input.match(/^[0-9]+$/))
-          return 'You have provided an invalid ID. Please use numbers only.'
-
-        if (teamList.length && (teamList.filter(val => (val.id === input))).length) 
-          return 'This id has already been assigned.';
-
-        return true;
-      }
-      
+      validate: input => validateData(input, 'ID')      
     },
     {
       type: 'input',
       name: 'email',
       message: 'Enter ROLE\'s Email',
-      validate: input => {
-        // Reference: https://www.w3resource.com/javascript/form/email-validation.php
-        if(/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(input)) {
-            return true;
-        }
-        return 'Please enter a valid email address.';
-      }
+      validate: input => validateData(input, 'email')
     }
   ],
   // A list of questions for the manager's role
@@ -64,14 +47,7 @@ const questions = {
       type: 'input',
       name: 'number',
       message: 'Enter Office Number',
-      validate: input => {
-        // Reference: https://www.regexpal.com/?fam=99127
-        if(/^(?:(?:\(?(?:00|\+)([1-4]\d\d|[1-9]\d?)\)?)?[\-\.\ \\\/]?)?((?:\(?\d{1,}\)?[\-\.\ \\\/]?){0,})(?:[\-\.\ \\\/]?(?:#|ext\.?|extension|x)[\-\.\ \\\/]?(\d+))?$/.test(input)) {
-            return true;
-        }
-        return 'Please enter a number a valid phone number.';
-      }   
-
+      validate: input => validateData(input, 'phone')
     }
   ],
   // A list of questions for the engineer's role
@@ -80,9 +56,7 @@ const questions = {
       type: 'input',
       name: 'github',
       message: 'Enter GitHub username',
-      validate: input => {
-
-      }
+      validate: input => validateData(input, 'github')
     }
   ],
   // A list of questions for the intern's role
@@ -101,6 +75,50 @@ const questions = {
       message: 'Add another employee'
     }
   ]
+}
+
+const validateData = (input, type = 'ID') => {
+
+  if (type === 'ID') {
+
+    // Reference: https://www.w3resource.com/javascript/form/all-numbers.php
+    if (!input.match(/^[0-9]+$/))
+      return 'You have provided an invalid ID. Please use numbers only.'
+
+    if (teamList.length && (teamList.filter(val => (val.id === input))).length) 
+      return 'This id has already been assigned.';
+
+    return true;
+
+  } 
+  else if (type === 'email') {
+    
+    // Reference: https://www.w3resource.com/javascript/form/email-validation.php
+    if(/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(input)) {
+        return true;
+    }
+    return 'Please enter a valid email address.';
+
+  }
+  else if (type === 'phone') {
+
+    // Reference: https://www.regexpal.com/?fam=99127
+    if(/^(?:(?:\(?(?:00|\+)([1-4]\d\d|[1-9]\d?)\)?)?[\-\.\ \\\/]?)?((?:\(?\d{1,}\)?[\-\.\ \\\/]?){0,})(?:[\-\.\ \\\/]?(?:#|ext\.?|extension|x)[\-\.\ \\\/]?(\d+))?$/.test(input)) {
+        return true;
+    }
+    return 'Please enter a number a valid phone number.';
+    
+  }
+  else if (type === 'github') {
+
+    return ajax(input).then(r => !r ? 'You have provided an invalid GitHub username.' : true)
+
+  }
+  else if (type === 'exist') {
+
+    return (teamList.filter(val => (val.getRole() === input))).length
+
+  }
 }
 
 const init = () => {
@@ -132,11 +150,30 @@ const init = () => {
 
   }
 
+  confirmExit = () => {
+
+    inquirer.prompt({
+      type: 'confirm',
+      name: 'role',
+      message: 'Are you sure you would like to quit?',
+    })
+    .then(processRoleEntry)
+
+  }
+
   processRoleEntry = r => {
       
     const role = r.role;
 
     switch (role) {
+      case true:
+          // Double check if we actually wanted to exit or not
+          endEntry(true);
+        break;
+      case false:
+          // Double check if we actually wanted to exit or not.
+          askRole();
+        break;
       case 'manager':
         // Once we start the managers entry, list remove it from the array so we are not prompted.
         roles.splice(roles.indexOf('manager'), 1);
@@ -145,12 +182,13 @@ const init = () => {
       case 'intern':
           
         // Join and map a list of all the questions for the relevent roles.
-        const listOfQuestions = questions.base // Base question
-                                  .concat(
-                                    questions[role], // Role specific question
-                                    questions.anotherEntry // Final follow up question
-                                  );
-        
+        let listOfQuestions = questions.base.concat(questions[role]);
+
+        if ((role === 'engineer' && validateData('Manager', 'exist')) 
+          || (role === 'manager' && validateData('Engineer', 'exist'))) {
+          listOfQuestions = listOfQuestions.concat(questions.anotherEntry);
+        }
+      
         listOfQuestions.map(val => {
           //val.message = val.message.replace('ROLE', role);
           val.message = val.message.replace('ROLE', 'employee');
@@ -162,6 +200,26 @@ const init = () => {
 
         break;
       default:
+
+        if (teamList.length) {
+
+          if (validateData('Manager', 'exist') === 0) {
+            console.log(`You have not included a manager. Please enter one.`);
+            askRole();
+            break;
+          }
+          
+          if (validateData('Engineer', 'exist') === 0) {
+            console.log('You have not included an engineer. Please include at least one engineer.');
+            askRole();
+            break;
+          }
+
+        } 
+        else {
+          confirmExit();
+          break;
+        }
 
         // If all options does not match end it!
         endEntry();
@@ -181,11 +239,15 @@ const init = () => {
       teamList.push(new Intern(r.name, r.id, r.email, r.school))
 
     // Lets repeat the process or end it!
-    if (r.anotherEntry) askRole();
-    else endEntry();
+    if (!r.hasOwnProperty('anotherEntry')) askRole();
+    else if (r.anotherEntry) askRole();
+    else confirmExit();
   }
 
-  endEntry = () => {
+  endEntry = (cancel = false) => {
+
+    if (cancel)
+      return console.log('Team roster build cancled!');
 
     // Check if OUTPUT_DIR is accessible
     accessFileAsync(OUTPUT_DIR)
