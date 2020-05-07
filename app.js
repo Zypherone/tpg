@@ -184,6 +184,7 @@ const init = () => {
         // Join and map a list of all the questions for the relevent roles.
         let listOfQuestions = questions.base.concat(questions[role]);
 
+        // Since there is a requirement that one manager and at least one engineer is need. Only ask if it has been fufilled.
         if ((role === 'engineer' && validateData('Manager', 'exist')) 
           || (role === 'manager' && validateData('Engineer', 'exist'))) {
           listOfQuestions = listOfQuestions.concat(questions.anotherEntry);
