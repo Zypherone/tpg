@@ -32,7 +32,7 @@ npm install
 Then run the application by typing ```node app``` into the CLI:
 
 ```
-node index
+node app
 ```
 
 Then follow the prompts.
